@@ -1,0 +1,115 @@
+<div id = 'error'></div>
+Username: <input id = 'username' type='text' name='Username'>
+Game ID : <input id = 'gameId' type='text' name='gameId'><br>
+<button onClick = 'joinGame()'>Join Game</button>
+<button onClick = 'createGame()'>Create Game</button><br>
+
+<div id = 'canvas'>
+<canvas display = 'none' id = 'ctx' width = '500' height = '500' style = 'border: 1px solid #000000;'></canvas>
+</div>
+
+<script src = "https://cdn.socket.io/socket.io-1.4.5.js">
+</script>
+<script>
+	var DEBUG = 1;
+	var gameJoined = 0;
+
+	var socket = io();
+
+	var createGame = function(){
+		if (DEBUG) console.log('Create Game Called');
+		var user = (document.getElementById('username').value).trim();
+		if (DEBUG) console.log('username:' + user );
+		if (!user){
+			document.getElementById('error').innerHTML = 'Enter Username';
+			if (DEBUG) console.log('Empty Username');
+			return;
+		}
+		document.getElementById('error').innerHTML = "";
+		socket.emit('newGame', {username: user});
+		if (DEBUG) console.log('Emitted New Game Request');
+
+		socket.on('newGameResponse', function(data){
+			if (data.successful) {
+				document.getElementById('error').innerHTML = 'Game Created Successfully @ ' + data.id;
+				gameJoined = 1;
+			}
+			else {
+				document.getElementById('error').innerHTML = 'Unable to Create Game';
+			}
+		});
+	}
+
+	var joinGame = function(){
+		if (DEBUG) console.log('Join Game Called');
+		var user = (document.getElementById('username').value).trim();
+		var game = (document.getElementById('gameId').value).trim();
+		if (DEBUG) console.log('username:' + user);
+		if (!user){
+			document.getElementById('error').innerHTML = 'Enter Username';
+			if (DEBUG) console.log('Empty Username');
+			return;
+		}
+		if (!game){
+			document.getElementById('error').innerHTML = 'Enter Game ID';
+			if (DEBUG) console.log('Empty Game ID');
+			return;
+		}
+		document.getElementById('error').innerHTML = "";
+		socket.emit('joinGame', {username: user, gameId: game});
+		if (DEBUG) console.log('Join Game Request');
+
+		socket.on('joinGameResponse', function(data){
+			if (data.successful) {
+				document.getElementById('error').innerHTML = 'Joining Game @ ' + data.id;
+				gameJoined = 1;
+			}
+			else {
+				document.getElementById('error').innerHTML = 'Unable to Join Game';
+			}
+		});
+	}
+
+
+
+	var ctx = document.getElementById('ctx').getContext('2d');
+	ctx.font = '30px Arial';
+
+	//var socket = io();
+
+	socket.on('newPositions', function(data){
+		//console.log('newPositions Recieved')
+		ctx.clearRect(0,0,500,500);
+		for (var i in data){
+			ctx.fillText(data[i].username, data[i].x, data[i].y);
+		}
+	});
+
+	document.onkeydown = function (event){
+		if (gameJoined){
+			console.log('key pressed')
+			if (event.keyCode === 39) //right
+				socket.emit('keyPress', {inputId: 'right', state: true});
+			else if (event.keyCode === 37) //left
+				socket.emit('keyPress', {inputId: 'left', state: true});
+			else if (event.keyCode === 40) //down
+				socket.emit('keyPress', {inputId: 'down', state: true});
+			else if (event.keyCode === 38) //up
+				socket.emit('keyPress', {inputId: 'up', state: true});
+		}
+	}
+
+	document.onkeyup = function (event){
+		if (gameJoined){
+			if (event.keyCode === 39) //right
+				socket.emit('keyPress', {inputId: 'right', state: false});
+			else if (event.keyCode === 37) //left
+				socket.emit('keyPress', {inputId: 'left', state: false});
+			else if (event.keyCode === 40) //down
+				socket.emit('keyPress', {inputId: 'down', state: false});
+			else if (event.keyCode === 38) //up
+				socket.emit('keyPress', {inputId: 'up', state: false});
+		}
+	}
+
+</script>
